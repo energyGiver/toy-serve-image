@@ -1,22 +1,46 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AppController } from './app.controller';
+import { Response } from 'express';
+import { ImagesController } from './app.controller';
 import { AppService } from './app.service';
 
-describe('AppController', () => {
-  let appController: AppController;
+describe('ImagesController', () => {
+  let imagesController: ImagesController;
+  let appService: AppService;
+
+  // Mocked service method
+  const mockServeImage = jest.fn().mockImplementation((res: Response) => {
+    res.setHeader('Content-Type', 'image/jpeg');
+    return res.send('Mock Image Data');
+  });
 
   beforeEach(async () => {
     const app: TestingModule = await Test.createTestingModule({
-      controllers: [AppController],
-      providers: [AppService],
-    }).compile();
+      controllers: [ImagesController],
+      providers: [
+        AppService,
+      ],
+    })
+      .overrideProvider(AppService)  // Override the AppService
+      .useValue({                     // Provide a mocked version
+        serveImage: mockServeImage,
+      })
+      .compile();
 
-    appController = app.get<AppController>(AppController);
+    imagesController = app.get<ImagesController>(ImagesController);
+    appService = app.get<AppService>(AppService);
   });
 
-  describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+  describe('serveImage', () => {
+    it('should return synthesized image', () => {
+      const mockRes: Partial<Response> = {
+        setHeader: jest.fn(),
+        send: jest.fn().mockReturnThis(),
+      };
+
+      imagesController.serveImage(mockRes as Response);
+
+      expect(mockRes.setHeader).toHaveBeenCalledWith('Content-Type', 'image/jpeg');
+      expect(mockRes.send).toHaveBeenCalledWith('Mock Image Data');
     });
   });
 });
